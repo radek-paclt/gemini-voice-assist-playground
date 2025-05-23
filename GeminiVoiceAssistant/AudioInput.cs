@@ -87,7 +87,7 @@ namespace GeminiVoiceAssistant
                         if (response.Error != null)
                         {
                             Console.WriteLine($"API Error: {response.Error.Code} - {response.Error.Message}");
-                            _responseHandlerCompletionSource.TrySetException(new RpcException(response.Error.ToString(), response.Error.Code));
+                            _responseHandlerCompletionSource.TrySetException(new System.ApplicationException($"Speech API Error: {response.Error.Message} (Code: {response.Error.Code})"));
                             return;
                         }
 
@@ -266,7 +266,3 @@ namespace GeminiVoiceAssistant
         }
     }
 }
-
-// RpcException class is expected to be defined elsewhere or provided if this file is compiled alone.
-// For example, in AudioOutput.cs or a shared utility file.
-// public class RpcException : Exception { /* ... */ }
