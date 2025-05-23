@@ -2,7 +2,7 @@
 
 ## Description
 
-The Gemini Voice Assistant is a .NET 8 console application that demonstrates a voice-controlled assistant experience. It utilizes Google Cloud Speech-to-Text for transcribing user speech, Google's Gemini Pro model (via the Vertex AI API) for generating intelligent responses, and Google Cloud Text-to-Speech for vocalizing the AI's answers. The application is configured for interaction in the Czech language and supports "barge-in" functionality, allowing the user to interrupt the AI while it's speaking.
+The Gemini Voice Assistant is a .NET 9 console application that demonstrates a voice-controlled assistant experience. It utilizes Google Cloud Speech-to-Text for transcribing user speech, Google's Gemini Pro model (via the Vertex AI API) for generating intelligent responses, and Google Cloud Text-to-Speech for vocalizing the AI's answers. The application is configured for interaction in the Czech language and supports "barge-in" functionality, allowing the user to interrupt the AI while it's speaking.
 
 ## Features
 
@@ -15,7 +15,7 @@ The Gemini Voice Assistant is a .NET 8 console application that demonstrates a v
 
 ## Prerequisites
 
-*   **.NET 8 SDK**: Download and install from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/8.0).
+*   **.NET 9 SDK**: Download and install from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/9.0) (or the appropriate .NET 9 download page when available).
 *   **A Google Cloud Platform (GCP) Project**: If you don't have one, create a new project at [console.cloud.google.com](https://console.cloud.google.com/).
 *   **Enabled GCP APIs**: Ensure the following APIs are enabled in your GCP project:
     *   Cloud Speech-to-Text API
