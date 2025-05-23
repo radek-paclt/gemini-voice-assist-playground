@@ -48,7 +48,7 @@ namespace GeminiVoiceAssistant
             bool recordingStarted = false;
             long bytesSent = 0;
 
-            if (WaveIn.DeviceCount == 0)
+            if (NAudio.Wave.WaveInEvent.DeviceCount == 0)
             {
                 Console.Error.WriteLine("No audio recording devices found.");
                 return "Error: No audio recording devices found.";
@@ -122,7 +122,7 @@ namespace GeminiVoiceAssistant
             _waveInEvent.DataAvailable += async (sender, args) =>
             {
                 if (cancellationToken.IsCancellationRequested) return; 
-                if (args.BytesRecorded > 0 && _streamingCall != null && !_streamingCall.IsWriteNeeded) // Check if stream is still expecting data
+                if (args.BytesRecorded > 0 && _streamingCall != null) // Check if stream is still expecting data
                 {
                     try
                     {
@@ -188,7 +188,7 @@ namespace GeminiVoiceAssistant
 
             try
             {
-                if (_streamingCall != null && _streamingCall.IsWriteNeeded) // Check if it's appropriate to call WriteCompleteAsync
+                if (_streamingCall != null) // Modified: Was previously checking IsWriteNeeded
                 {
                     await _streamingCall.WriteCompleteAsync(); 
                     Console.WriteLine($"AudioInput: Finished sending audio. Total bytes sent: {bytesSent}");
@@ -239,9 +239,9 @@ namespace GeminiVoiceAssistant
 
         public static void ListAudioDevices()
         {
-            for (int n = -1; n < WaveIn.DeviceCount; n++)
+            for (int n = -1; n < NAudio.Wave.WaveInEvent.DeviceCount; n++)
             {
-                var caps = WaveIn.GetCapabilities(n);
+                var caps = NAudio.Wave.WaveInEvent.GetCapabilities(n);
                 Console.WriteLine($"{n}: {caps.ProductName}");
             }
         }
@@ -260,7 +260,6 @@ namespace GeminiVoiceAssistant
                 _waveInEvent?.Dispose();
                 _waveInEvent = null;
                 _streamingCall = null; // gRPC call object management
-                _speechClient?.Dispose(); 
                 _speechClient = null;
             }
         }

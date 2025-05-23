@@ -182,7 +182,6 @@ namespace GeminiVoiceAssistant
                 _waveOutEvent?.Stop(); 
                 _waveOutEvent?.Dispose();
                 _waveOutEvent = null;
-                _textToSpeechClient?.Dispose(); 
             }
         }
     }
