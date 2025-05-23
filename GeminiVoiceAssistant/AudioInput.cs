@@ -43,12 +43,14 @@ namespace GeminiVoiceAssistant
 
         public async Task<string> RecognizeSpeechAsync(CancellationToken cancellationToken, int maxDurationSeconds = 10)
         {
+            Console.WriteLine($"AudioInput: Starting speech recognition (max duration: {maxDurationSeconds}s)");
             _finalTranscriptBuilder = new StringBuilder();
             _responseHandlerCompletionSource = new TaskCompletionSource<bool>();
             bool recordingStarted = false;
+            bool streamCompleted = false;
             long bytesSent = 0;
 
-            if (WaveIn.DeviceCount == 0)
+            if (WaveInEvent.DeviceCount == 0)
             {
                 Console.Error.WriteLine("No audio recording devices found.");
                 return "Error: No audio recording devices found.";
@@ -62,6 +64,7 @@ namespace GeminiVoiceAssistant
 
             _streamingCall = _speechClient.StreamingRecognize();
 
+            Console.WriteLine($"AudioInput: Configuring speech recognition for language: {_sttSettings.LanguageCode}");
             await _streamingCall.WriteAsync(new StreamingRecognizeRequest
             {
                 StreamingConfig = new StreamingRecognitionConfig
@@ -72,10 +75,26 @@ namespace GeminiVoiceAssistant
                         SampleRateHertz = DefaultSampleRate,
                         LanguageCode = _sttSettings.LanguageCode,
                         EnableAutomaticPunctuation = true,
+                        MaxAlternatives = 1,
+                        ProfanityFilter = false,
+                        EnableWordTimeOffsets = false,
+                        EnableWordConfidence = true, // Enable confidence scores
+                        AudioChannelCount = 1,
+                        EnableSeparateRecognitionPerChannel = false,
+                        UseEnhanced = true, // Use enhanced model for better accuracy
+                        // Add speech contexts for better Czech recognition
+                        SpeechContexts = {
+                            new SpeechContext
+                            {
+                                Phrases = { "haló", "slyším", "ano", "ne", "děkuji", "prosím" }
+                            }
+                        }
                     },
                     InterimResults = true,
+                    SingleUtterance = false // Allow multiple utterances in one stream
                 }
             });
+            Console.WriteLine("AudioInput: Speech recognition stream initialized");
 
             var responseHandlerTask = Task.Run(async () =>
             {
@@ -93,24 +112,47 @@ namespace GeminiVoiceAssistant
 
                         foreach (var result in response.Results)
                         {
+                            Console.WriteLine($"[DEBUG] Received result - IsFinal: {result.IsFinal}, Stability: {result.Stability}, ResultEndTime: {result.ResultEndTime}");
                             if (result.IsFinal)
                             {
                                 var transcript = result.Alternatives[0].Transcript;
+                                var confidence = result.Alternatives[0].Confidence;
                                 _finalTranscriptBuilder.Append(transcript);
-                                Console.WriteLine($"Final transcript segment: {transcript}");
+                                Console.WriteLine($"[FINAL] Final transcript segment: '{transcript}' (confidence: {confidence})");
+                                
+                                // If we have a final result, we can complete successfully even if cancelled later
+                                if (!_responseHandlerCompletionSource.Task.IsCompleted)
+                                {
+                                    _responseHandlerCompletionSource.TrySetResult(true);
+                                }
                             }
                             else
                             {
-                                Console.WriteLine($"Interim transcript: {result.Alternatives[0].Transcript}");
+                                var transcript = result.Alternatives[0].Transcript;
+                                Console.WriteLine($"[INTERIM] Interim transcript: '{transcript}' (stability: {result.Stability})");
                             }
                         }
                     }
-                    _responseHandlerCompletionSource.TrySetResult(true); 
+                    // Only set result if not already completed (e.g., by final transcript above)
+                    if (!_responseHandlerCompletionSource.Task.IsCompleted)
+                    {
+                        _responseHandlerCompletionSource.TrySetResult(true);
+                    }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    Console.WriteLine($"AudioInput ResponseHandler: Operation cancelled. ");
-                    _responseHandlerCompletionSource.TrySetCanceled(cancellationToken);
+                    // If we have final results, don't treat cancellation as an error
+                    if (_finalTranscriptBuilder.Length > 0)
+                    {
+                        if (!_responseHandlerCompletionSource.Task.IsCompleted)
+                        {
+                            _responseHandlerCompletionSource.TrySetResult(true);
+                        }
+                    }
+                    else
+                    {
+                        _responseHandlerCompletionSource.TrySetCanceled(cancellationToken);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -121,8 +163,15 @@ namespace GeminiVoiceAssistant
 
             _waveInEvent.DataAvailable += async (sender, args) =>
             {
-                if (cancellationToken.IsCancellationRequested) return; 
-                if (args.BytesRecorded > 0 && _streamingCall != null && !_streamingCall.IsWriteNeeded) // Check if stream is still expecting data
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                if (streamCompleted)
+                {
+                    return;
+                }
+                if (args.BytesRecorded > 0 && _streamingCall != null) // Check if stream is still active
                 {
                     try
                     {
@@ -188,9 +237,10 @@ namespace GeminiVoiceAssistant
 
             try
             {
-                if (_streamingCall != null && _streamingCall.IsWriteNeeded) // Check if it's appropriate to call WriteCompleteAsync
+                if (_streamingCall != null) // Check if stream is still active
                 {
-                    await _streamingCall.WriteCompleteAsync(); 
+                    streamCompleted = true; // Set flag BEFORE calling WriteCompleteAsync
+                    await _streamingCall.WriteCompleteAsync();
                     Console.WriteLine($"AudioInput: Finished sending audio. Total bytes sent: {bytesSent}");
                 }
             }
@@ -201,29 +251,39 @@ namespace GeminiVoiceAssistant
             
             try
             {
-                 await responseHandlerTask; // This now correctly awaits the task which is also observing the CancellationToken
+                await responseHandlerTask; // This now correctly awaits the task which is also observing the CancellationToken
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("AudioInput: Speech recognition task was cancelled (outer await).");
-                return string.Empty; 
+                Console.WriteLine("AudioInput: Speech recognition task was cancelled.");
+                return string.Empty;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AudioInput: An error occurred in response handler task (outer await): {ex.Message}");
+                Console.WriteLine($"AudioInput: An error occurred in response handler task: {ex.Message}");
             }
 
             if (_responseHandlerCompletionSource.Task.IsFaulted && _responseHandlerCompletionSource.Task.Exception != null)
             {
                  var aggEx = _responseHandlerCompletionSource.Task.Exception.Flatten();
-                 foreach(var ex in aggEx.InnerExceptions)
+                 // Only report as error if we don't have any final transcript
+                 if (_finalTranscriptBuilder.Length == 0)
                  {
-                    Console.WriteLine($"AudioInput: Recognition failed with error: {ex.Message}");
+                     foreach(var ex in aggEx.InnerExceptions)
+                     {
+                        Console.WriteLine($"AudioInput: Recognition failed with error: {ex.Message}");
+                     }
+                     return $"Error during recognition: {aggEx.InnerExceptions[0].Message}";
                  }
-                 return $"Error during recognition: {aggEx.InnerExceptions[0].Message}";
+                 else
+                 {
+                     Console.WriteLine($"AudioInput: Task faulted but we have final transcript, proceeding with result");
+                 }
             }
             
-            if (_finalTranscriptBuilder.Length == 0 && bytesSent > 0 && !cancellationToken.IsCancellationRequested)
+            var finalResult = _finalTranscriptBuilder.ToString().Trim();
+            
+            if (finalResult.Length == 0 && bytesSent > 0 && !cancellationToken.IsCancellationRequested)
             {
                 Console.WriteLine("AudioInput: No final transcript received, though audio was sent.");
                 return "No speech detected or recognized.";
@@ -234,14 +294,14 @@ namespace GeminiVoiceAssistant
                 return "No audio data captured.";
             }
 
-            return _finalTranscriptBuilder.ToString();
+            return finalResult;
         }
 
         public static void ListAudioDevices()
         {
-            for (int n = -1; n < WaveIn.DeviceCount; n++)
+            for (int n = -1; n < WaveInEvent.DeviceCount; n++)
             {
-                var caps = WaveIn.GetCapabilities(n);
+                var caps = WaveInEvent.GetCapabilities(n);
                 Console.WriteLine($"{n}: {caps.ProductName}");
             }
         }
@@ -260,7 +320,7 @@ namespace GeminiVoiceAssistant
                 _waveInEvent?.Dispose();
                 _waveInEvent = null;
                 _streamingCall = null; // gRPC call object management
-                _speechClient?.Dispose(); 
+                // SpeechClient doesn't implement IDisposable in current version
                 _speechClient = null;
             }
         }
