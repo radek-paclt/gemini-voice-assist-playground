@@ -50,7 +50,11 @@ namespace GeminiVoiceAssistant
             bool streamCompleted = false;
             long bytesSent = 0;
 
+<<<<<<< HEAD
             if (WaveInEvent.DeviceCount == 0)
+=======
+            if (NAudio.Wave.WaveInEvent.DeviceCount == 0)
+>>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
             {
                 Console.Error.WriteLine("No audio recording devices found.");
                 return "Error: No audio recording devices found.";
@@ -163,6 +167,7 @@ namespace GeminiVoiceAssistant
 
             _waveInEvent.DataAvailable += async (sender, args) =>
             {
+<<<<<<< HEAD
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return;
@@ -172,6 +177,10 @@ namespace GeminiVoiceAssistant
                     return;
                 }
                 if (args.BytesRecorded > 0 && _streamingCall != null) // Check if stream is still active
+=======
+                if (cancellationToken.IsCancellationRequested) return; 
+                if (args.BytesRecorded > 0 && _streamingCall != null) // Check if stream is still expecting data
+>>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
                 {
                     try
                     {
@@ -237,7 +246,11 @@ namespace GeminiVoiceAssistant
 
             try
             {
+<<<<<<< HEAD
                 if (_streamingCall != null) // Check if stream is still active
+=======
+                if (_streamingCall != null) // Modified: Was previously checking IsWriteNeeded
+>>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
                 {
                     streamCompleted = true; // Set flag BEFORE calling WriteCompleteAsync
                     await _streamingCall.WriteCompleteAsync();
@@ -299,9 +312,15 @@ namespace GeminiVoiceAssistant
 
         public static void ListAudioDevices()
         {
+<<<<<<< HEAD
             for (int n = -1; n < WaveInEvent.DeviceCount; n++)
             {
                 var caps = WaveInEvent.GetCapabilities(n);
+=======
+            for (int n = -1; n < NAudio.Wave.WaveInEvent.DeviceCount; n++)
+            {
+                var caps = NAudio.Wave.WaveInEvent.GetCapabilities(n);
+>>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
                 Console.WriteLine($"{n}: {caps.ProductName}");
             }
         }
@@ -320,7 +339,10 @@ namespace GeminiVoiceAssistant
                 _waveInEvent?.Dispose();
                 _waveInEvent = null;
                 _streamingCall = null; // gRPC call object management
+<<<<<<< HEAD
                 // SpeechClient doesn't implement IDisposable in current version
+=======
+>>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
                 _speechClient = null;
             }
         }
