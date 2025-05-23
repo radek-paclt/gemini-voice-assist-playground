@@ -1,0 +1,6 @@
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.csproj.AssemblyReference.cache
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.GeneratedMSBuildEditorConfig.editorconfig
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.AssemblyInfoInputs.cache
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.AssemblyInfo.cs
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.csproj.CoreCompileInputs.cache
+/app/GeminiVoiceAssistant/obj/Debug/net8.0/GeminiVoiceAssistant.sourcelink.json
