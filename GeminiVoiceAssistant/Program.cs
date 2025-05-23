@@ -48,6 +48,12 @@ namespace GeminiVoiceAssistant
             Console.WriteLine($"Using Project ID: {_appSettings.GoogleCloud.ProjectId}");
             Console.WriteLine($"Using Region: {_appSettings.GoogleCloud.Region}");
             Console.WriteLine($"Using Gemini Model: {_appSettings.Gemini.ModelId}");
+            
+            // Log system prompt configuration if available
+            if (!string.IsNullOrWhiteSpace(_appSettings.Gemini.SystemPrompt))
+            {
+                Console.WriteLine($"System prompt configured: {_appSettings.Gemini.SystemPrompt.Substring(0, Math.Min(50, _appSettings.Gemini.SystemPrompt.Length))}...");
+            }
 
 
             AudioInput audioInput = null;

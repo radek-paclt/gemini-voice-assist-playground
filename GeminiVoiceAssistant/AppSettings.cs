@@ -9,6 +9,7 @@ namespace GeminiVoiceAssistant
     public class GeminiSettings
     {
         public string ModelId { get; set; }
+        public string? SystemPrompt { get; set; }
     }
 
     public class SpeechToTextSettings

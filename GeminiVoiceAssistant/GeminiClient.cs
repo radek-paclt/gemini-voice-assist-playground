@@ -53,17 +53,25 @@ namespace GeminiVoiceAssistant
 
             var endpointName = EndpointName.FromProjectLocationPublisherModel(_gcSettings.ProjectId, _gcSettings.Region, "google", _geminiSettings.ModelId);
             
-            var prompt = new Content
-            {
-                Role = "USER",
-                Parts = { new Part { Text = inputText } }
-            };
-
             var generateContentRequest = new GenerateContentRequest
             {
-                Model = endpointName.ToString(),
-                Contents = { prompt }
+                Model = endpointName.ToString()
             };
+
+            // Combine system prompt with user input if system prompt is configured
+            string finalUserInput = inputText;
+            if (!string.IsNullOrWhiteSpace(_geminiSettings.SystemPrompt))
+            {
+                finalUserInput = $"{_geminiSettings.SystemPrompt}\n\nUser: {inputText}";
+            }
+
+            // Add user input (with optional system prompt prepended)
+            var userPrompt = new Content
+            {
+                Role = "USER",
+                Parts = { new Part { Text = finalUserInput } }
+            };
+            generateContentRequest.Contents.Add(userPrompt);
 
             try
             {

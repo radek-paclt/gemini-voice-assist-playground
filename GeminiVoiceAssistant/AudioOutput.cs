@@ -182,10 +182,7 @@ namespace GeminiVoiceAssistant
                 _waveOutEvent?.Stop(); 
                 _waveOutEvent?.Dispose();
                 _waveOutEvent = null;
-<<<<<<< HEAD
                 // TextToSpeechClient doesn't implement IDisposable in current version
-=======
->>>>>>> cf126aa509fcfc425bd424be1918b9ee5280d417
             }
         }
     }
